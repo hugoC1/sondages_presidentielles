@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sondages présidentielles</title>
+<style>
+:root {
+  --bg: #f6f6f4; --surface: #ffffff; --ink: #1b1b1f; --ink2: #55565c; --muted: #8a8b91;
+  --line: #e2e2df; --grid: #ececea; --accent: #3550e6; --chip: #f1f1ef; --chip-hover: #e7e7e4;
+  --on: #1b1b1f; --on-ink: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111113; --surface: #1a1a1e; --ink: #ececee; --ink2: #b3b4ba; --muted: #808188;
+    --line: #2d2d32; --grid: #26262b; --accent: #8a9cff; --chip: #24242a; --chip-hover: #2e2e35;
+    --on: #ececee; --on-ink: #111113; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111113; --surface: #1a1a1e; --ink: #ececee; --ink2: #b3b4ba; --muted: #808188;
+  --line: #2d2d32; --grid: #26262b; --accent: #8a9cff; --chip: #24242a; --chip-hover: #2e2e35;
+  --on: #ececee; --on-ink: #111113; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width: 1500px; margin: 0 auto; padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+.sub { color: var(--ink2); margin: 0; }
+.sub b { color: var(--ink); }
+.small { font-size: 12px; color: var(--muted); }
+button { font: inherit; color: inherit; }
+
+/* Contrôles */
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: 18px 0 14px; }
+.ctl { display: flex; align-items: center; gap: 8px; }
+.ctl > label { color: var(--ink2); font-size: 12px; }
+.seg { display: inline-flex; background: var(--chip); border-radius: 8px; padding: 2px; }
+.seg button { border: 0; background: transparent; padding: 5px 10px; border-radius: 6px; cursor: pointer; color: var(--ink2); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line); font-weight: 600; }
+select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+.chk { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; color: var(--ink); }
+.iconbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+
+/* Mise en page */
+.layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.picker { max-height: calc(100vh - 40px); overflow: auto; position: sticky; top: 16px; align-self: start; }
+@media (max-width: 900px) { .picker { position: static; max-height: 380px; } }
+.picker h2, .card h2 { font-size: 13px; margin: 0 0 8px; color: var(--ink2); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.search { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; margin-bottom: 10px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.presets button { border: 1px dashed var(--line); background: transparent; border-radius: 999px; padding: 3px 9px; cursor: pointer; font-size: 12px; color: var(--ink2); }
+.presets button:hover { background: var(--chip-hover); color: var(--ink); }
+.elec { margin-bottom: 12px; }
+.elec-title { font-weight: 600; margin: 6px 0 6px; display: flex; align-items: center; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; background: var(--chip); border-radius: 999px;
+  padding: 3px 9px 3px 7px; cursor: pointer; font-size: 12.5px; }
+.chip:hover { background: var(--chip-hover); }
+.chip[aria-pressed="true"] { background: var(--on); color: var(--on-ink); }
+.chip .p { opacity: .65; font-size: 11px; }
+.chip .n { opacity: .5; font-size: 10.5px; }
+.chip svg { flex: none; }
+.more { border: 0; background: none; color: var(--accent); cursor: pointer; font-size: 12px; padding: 2px 0; }
+
+.chart-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+#chart { width: 100%; height: max(440px, 64vh); }
+.empty { color: var(--muted); padding: 40px; text-align: center; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--ink2); font-weight: 600; font-size: 12px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.tables { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px; }
+.scroll { overflow-x: auto; }
+details summary { cursor: pointer; color: var(--ink2); font-weight: 600; }
+.key { display: inline-block; vertical-align: middle; margin-right: 6px; }
+footer { margin-top: 20px; color: var(--muted); font-size: 12px; }
+footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Sondages de l'élection présidentielle : 2027 face à 2022 et 2017</h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <button class="iconbtn" id="themeBtn" title="Changer de thème">◐ Thème</button>
+  </header>
+
+  <div class="controls" role="toolbar" aria-label="Filtres">
+    <div class="ctl"><label>Tour</label>
+      <div class="seg" data-key="tour"><button data-v="1">1er tour</button><button data-v="2">2nd tour</button></div></div>
+    <div class="ctl"><label>Axe du temps</label>
+      <div class="seg" data-key="mode"><button data-v="compare">Jours avant le scrutin</button><button data-v="calendar">Calendrier réel</button></div></div>
+    <div class="ctl"><label>Période</label>
+      <div class="seg" data-key="range"><button data-v="6m">6 mois</button><button data-v="1y">1 an</button><button data-v="2y">2 ans</button><button data-v="all">Tout</button></div></div>
+    <div class="ctl"><label>Élections</label>
+      <span id="elecChecks"></span></div>
+    <div class="ctl"><label for="smoothSel">Lissage</label>
+      <select id="smoothSel">
+        <option value="0">Aucun (relie les sondages)</option>
+        <option value="15">Moyenne mobile ~15 j</option>
+        <option value="30">Moyenne mobile ~30 j</option>
+        <option value="60">Moyenne mobile ~60 j</option>
+        <option value="120">Moyenne mobile ~120 j</option>
+      </select></div>
+    <div class="ctl"><label for="aggSel">Hypothèses</label>
+      <select id="aggSel">
+        <option value="poll">Moyenne par sondage</option>
+        <option value="all">Toutes les hypothèses</option>
+      </select></div>
+    <label class="chk"><input type="checkbox" id="ptsChk"> Points des sondages</label>
+  </div>
+
+  <div class="layout">
+    <aside class="card picker" aria-label="Choix des candidats">
+      <h2 id="pickerTitle">Candidats</h2>
+      <input class="search" id="search" type="search" placeholder="Rechercher un nom…">
+      <div class="presets" id="presets"></div>
+      <div id="chipLists"></div>
+    </aside>
+
+    <section>
+      <div class="card">
+        <div class="chart-head">
+          <h2 id="chartTitle">Intentions de vote</h2>
+          <span class="small" id="chartNote"></span>
+        </div>
+        <div id="chart"></div>
+      </div>
+
+      <div class="tables">
+        <div class="card">
+          <h2 id="cmpTitle">Comparaison à date équivalente</h2>
+          <div class="scroll"><table id="cmpTable"></table></div>
+          <p class="small" id="cmpNote"></p>
+        </div>
+        <div class="card">
+          <details>
+            <summary>Détail des sondages affichés</summary>
+            <div class="scroll" style="margin-top:10px"><table id="dataTable"></table></div>
+            <p class="small" id="dataNote"></p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Source : Wikipédia, « Liste de sondages sur l'élection présidentielle française » de
+    <a href="https://fr.wikipedia.org/wiki/Liste_de_sondages_sur_l%27%C3%A9lection_pr%C3%A9sidentielle_fran%C3%A7aise_de_2017">2017</a>,
+    <a href="https://fr.wikipedia.org/wiki/Liste_de_sondages_sur_l%27%C3%A9lection_pr%C3%A9sidentielle_fran%C3%A7aise_de_2022">2022</a>,
+    <a href="https://fr.wikipedia.org/wiki/Liste_de_sondages_sur_l%27%C3%A9lection_pr%C3%A9sidentielle_fran%C3%A7aise_de_2027">2027</a>
+    (licence CC BY-SA). <span id="majNote"></span>
+    <span id="csvLinks">Données : <a href="data/sondages_1er_tour.csv">CSV 1er tour</a> · <a href="data/sondages_2nd_tour.csv">CSV 2nd tour</a> · <a href="https://github.com/hugoC1/sondages_presidentielles">code source</a>.</span>
+    Les intentions de vote ne sont pas des prévisions ; la marge d'erreur est de ±1 à ±3 points selon l'échantillon.
+  </footer>
+</div>
+
+<script src="lib/plotly-2.35.2.min.js"></script>
+<script>if (!window.Plotly) document.write('<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"><\/script>');</script>
+<script src="data/sondages.js"></script>
+<script>
+(function () {
+"use strict";
+const D = window.SONDAGES;
+const DAY = 864e5;
+const YEARS = D.elections.map(e => e.annee);
+const EL = {};
+D.elections.forEach(e => { EL[e.annee] = { t1: Date.parse(e.tour1 + "T00:00:00Z"), t2: Date.parse(e.tour2 + "T00:00:00Z"), tour1: e.tour1, tour2: e.tour2 }; });
+const PARTI = {};
+D.partis.forEach(p => { PARTI[p.election + "|" + p.candidat] = p.parti; });
+const NEXT = Math.max(...YEARS);
+const todayUTC = Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+const J_TODAY = Math.round((EL[NEXT].t1 - todayUTC) / DAY);   // jours restants avant le 1er tour 2027
+
+Plotly.register({ moduleType: "locale", name: "fr", dictionary: {
+    "Zoom": "Zoom", "Pan": "Déplacer", "Reset axes": "Réinitialiser les axes", "Autoscale": "Échelle automatique",
+    "Download plot as a png": "Télécharger en PNG", "Zoom in": "Zoom avant", "Zoom out": "Zoom arrière" },
+  format: { days: ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"],
+    shortDays: ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."],
+    months: ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"],
+    shortMonths: ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."],
+    date: "%d/%m/%Y", decimal: ",", thousands: " " } });
+
+// ---------- Couleurs : convention politique (couleur = candidat, même couleur d'une élection à l'autre)
+const NAME_COLORS = {
+  "Le Pen": "#1f3a8a", "Bardella": "#3b5bc4", "Candidat RN": "#1f3a8a", "Bardella / Le Pen": "#1f3a8a",
+  "Mélenchon": "#c8102e", "Ruffin": "#e2626f", "Roussel": "#8f1d1d", "Arthaud": "#6b2c2c", "Poutou": "#d9480f", "Besancenot": "#d9480f",
+  "Macron": "#d99a00", "Attal": "#b8860b", "Candidat EPR": "#b8860b", "Philippe": "#0e9aa7", "Bayrou": "#ef7d00", "Lagarde": "#4db6ac",
+  "Glucksmann": "#e0457b", "Hamon": "#d6336c", "Hidalgo": "#e64980", "Hollande": "#f06595", "Faure": "#c2255c", "Valls": "#a61e4d",
+  "Montebourg": "#f783ac", "Taubira": "#b0477a", "Cazeneuve": "#9c3d6b", "Candidat PS/PP": "#e0457b",
+  "Jadot": "#2f9e44", "Tondelier": "#2f9e44", "Duflot": "#37b24d", "Joly": "#69db7c", "Rousseau": "#51cf66",
+  "Fillon": "#1971c2", "Pécresse": "#1c7ed6", "Retailleau": "#1864ab", "Wauquiez": "#4dabf7", "Juppé": "#74c0fc",
+  "Sarkozy": "#0b4f8c", "Bertrand": "#5c94d6", "Barnier": "#3d78b8", "Le Maire": "#4c8fd0", "Candidat LR": "#1971c2", "Lisnard": "#5f6fd1",
+  "Dupont-Aignan": "#7048e8", "Zemmour": "#6f4e37", "Lassalle": "#8f8f1f", "Asselineau": "#0b7285", "Philippot": "#5f3dc4",
+  "Cheminade": "#868e96", "Villepin": "#8e7cc3", "Thouy": "#40a060", "Poisson": "#7a5c4f", "Darmanin": "#a07b00", "Knafo": "#8b6d5c"
+};
+const PARTY_COLORS = { LO: "#6b2c2c", NPA: "#d9480f", "NPA-A": "#d9480f", LFI: "#c8102e", FG: "#c8102e", PCF: "#8f1d1d",
+  PS: "#e64980", PP: "#e0457b", DVG: "#f783ac", EELV: "#2f9e44", LE: "#2f9e44", EM: "#d99a00", LREM: "#d99a00", RE: "#b8860b",
+  REN: "#d99a00", ENS: "#d99a00", EPR: "#b8860b", HOR: "#0e9aa7", MoDem: "#ef7d00", LR: "#1971c2", UMP: "#1971c2", UDI: "#4db6ac",
+  DLF: "#7048e8", RN: "#1f3a8a", FN: "#1f3a8a", REC: "#6f4e37", EXD: "#6f4e37", RES: "#8f8f1f", UPR: "#0b7285" };
+const FALLBACK = ["#7b8794", "#9a7b5f", "#6d8f71", "#8b6fa8", "#a0727f", "#5f8ea0"];
+
+function isDark() {
+  const t = document.documentElement.getAttribute("data-theme");
+  if (t) return t === "dark";
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function hexToHsl(h) {
+  const r = parseInt(h.slice(1, 3), 16) / 255, g = parseInt(h.slice(3, 5), 16) / 255, b = parseInt(h.slice(5, 7), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let hh = 0, s = 0; const l = (mx + mn) / 2;
+  if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+    hh = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; hh /= 6; }
+  return [hh * 360, s * 100, l * 100];
+}
+function colorOf(cand, e) {
+  let c = NAME_COLORS[cand] || PARTY_COLORS[PARTI[e + "|" + cand]];
+  if (!c) { let h = 0; for (const ch of cand) h = (h * 31 + ch.charCodeAt(0)) >>> 0; c = FALLBACK[h % FALLBACK.length]; }
+  if (isDark()) { const [h, s, l] = hexToHsl(c); if (l < 58) return `hsl(${h.toFixed(0)} ${Math.min(s, 85).toFixed(0)}% ${Math.max(l + 18, 58).toFixed(0)}%)`; }
+  return c;
+}
+const DASH = { 2027: "solid", 2022: "dash", 2017: "dot" };
+const SYMBOL = { 2027: "circle", 2022: "square", 2017: "triangle-up" };
+const WIDTH = { 2027: 3, 2022: 2.2, 2017: 2.2 };
+
+// ---------- Utilitaires
+const fmt = (v, d = 1) => v == null || isNaN(v) ? "—" : v.toLocaleString("fr-FR", { maximumFractionDigits: d });
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const yy = e => "’" + String(e).slice(2);
+const isoOf = ms => new Date(ms).toISOString().slice(0, 10);
+const dFr = iso => { const [y, m, d] = iso.split("-"); return `${+d} ${["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."][+m - 1]} ${y}`; };
+const jLabel = t => t < 0 ? `J${Math.round(t)} avant le 1er tour` : t === 0 ? "Jour du 1er tour" : `J+${Math.round(t)} après le 1er tour`;
+
+// ---------- Index des séries
+// tour 1 : groupe = candidat d'une élection ; tour 2 : groupe = duel d'une élection (2 séries)
+function buildIndex(hyps, tour) {
+  const groups = new Map();
+  for (const h of hyps) {
+    const cands = Object.keys(h.v);
+    const t = -h.j;
+    if (tour === 1) {
+      for (const c of cands) {
+        const key = h.e + "|" + c;
+        if (!groups.has(key)) groups.set(key, { key, e: h.e, label: c, party: PARTI[h.e + "|" + c] || "", series: new Map(), n: new Set(), last: -Infinity });
+        addPoint(groups.get(key), c, h, t);
+      }
+    } else {
+      if (cands.length !== 2) continue;
+      const duel = cands.slice().sort((a, b) => a.localeCompare(b, "fr")).join(" – ");
+      const key = h.e + "|" + duel;
+      if (!groups.has(key)) groups.set(key, { key, e: h.e, label: duel, party: "", series: new Map(), n: new Set(), last: -Infinity });
+      for (const c of cands) addPoint(groups.get(key), c, h, t);
+    }
+  }
+  return groups;
+}
+function addPoint(g, cand, h, t) {
+  if (!g.series.has(cand)) g.series.set(cand, { cand, e: g.e, pts: [], res: null });
+  const s = g.series.get(cand);
+  if (h.r) { s.res = { v: h.v[cand], t }; return; }
+  s.pts.push({ t, v: h.v[cand], h });
+  g.n.add(h.p); g.last = Math.max(g.last, t);
+}
+const IDX = { 1: buildIndex(D.t1, 1), 2: buildIndex(D.t2, 2) };
+
+// ---------- État (mémorisé localement si possible)
+const DEFAULTS = {
+  tour: 1, mode: "compare", range: "2y", smooth: 30, agg: "poll", points: true, years: YEARS.slice(),
+  sel1: ["2027|Le Pen", "2022|Le Pen", "2017|Le Pen", "2027|Mélenchon", "2022|Mélenchon", "2017|Mélenchon", "2022|Macron", "2017|Macron", "2027|Philippe"],
+  sel2: ["2027|Le Pen – Philippe", "2022|Le Pen – Macron", "2017|Le Pen – Macron"], showAll: false
+};
+let state;
+try { state = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem("sondages-pres-state") || "{}")); } catch (e) { state = Object.assign({}, DEFAULTS); }
+const save = () => { try { localStorage.setItem("sondages-pres-state", JSON.stringify(state)); } catch (e) {} };
+const sel = () => new Set(state.tour === 1 ? state.sel1 : state.sel2);
+const setSel = s => { if (state.tour === 1) state.sel1 = [...s]; else state.sel2 = [...s]; };
+
+const PRESETS = {
+  1: [
+    ["Le Pen ×3", ["2027|Le Pen", "2022|Le Pen", "2017|Le Pen"]],
+    ["Mélenchon ×3", ["2027|Mélenchon", "2022|Mélenchon", "2017|Mélenchon"]],
+    ["Bloc central", ["2017|Macron", "2022|Macron", "2027|Philippe", "2027|Attal"]],
+    ["Droite LR", ["2017|Fillon", "2022|Pécresse", "2027|Retailleau"]],
+    ["PS / PP", ["2017|Hamon", "2022|Hidalgo", "2027|Glucksmann"]],
+    ["Écologistes", ["2017|Jadot", "2022|Jadot", "2027|Tondelier"]],
+    ["Zemmour", ["2022|Zemmour", "2027|Zemmour"]],
+    ["Top 2027", "top2027"],
+    ["Défaut", DEFAULTS.sel1],
+    ["Effacer", []]
+  ],
+  2: [
+    ["Le Pen face au bloc central", ["2017|Le Pen – Macron", "2022|Le Pen – Macron", "2027|Le Pen – Philippe", "2027|Attal – Le Pen"]],
+    ["Le Pen – Mélenchon", ["2017|Le Pen – Mélenchon", "2022|Le Pen – Mélenchon", "2027|Le Pen – Mélenchon"]],
+    ["Effacer", []]
+  ]
+};
+
+// ---------- Contrôles
+function syncControls() {
+  document.querySelectorAll(".seg").forEach(seg => {
+    const k = seg.dataset.key;
+    seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(String(state[k]) === b.dataset.v)));
+  });
+  document.getElementById("smoothSel").value = String(state.smooth);
+  document.getElementById("aggSel").value = state.agg;
+  document.getElementById("ptsChk").checked = state.points;
+  const ec = document.getElementById("elecChecks"); ec.textContent = "";
+  YEARS.slice().reverse().forEach(y => {
+    const l = document.createElement("label"); l.className = "chk"; l.style.marginRight = "8px";
+    const i = document.createElement("input"); i.type = "checkbox"; i.checked = state.years.includes(y);
+    i.addEventListener("change", () => { state.years = i.checked ? [...state.years, y] : state.years.filter(v => v !== y); update(); });
+    l.append(i, keySvg(y, "currentColor"), document.createTextNode(String(y))); ec.append(l);
+  });
+}
+document.querySelectorAll(".seg").forEach(seg => seg.addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  const k = seg.dataset.key; state[k] = k === "tour" ? +b.dataset.v : b.dataset.v; update(true);
+}));
+document.getElementById("smoothSel").addEventListener("change", e => { state.smooth = +e.target.value; update(); });
+document.getElementById("aggSel").addEventListener("change", e => { state.agg = e.target.value; update(); });
+document.getElementById("ptsChk").addEventListener("change", e => { state.points = e.target.checked; update(); });
+document.getElementById("search").addEventListener("input", () => renderPicker());
+document.getElementById("themeBtn").addEventListener("click", () => {
+  const next = isDark() ? "light" : "dark"; document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem("sondages-pres-theme", next); } catch (e) {} update();
+});
+try { const th = localStorage.getItem("sondages-pres-theme"); if (th) document.documentElement.setAttribute("data-theme", th); } catch (e) {}
+if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => update());
+
+function keySvg(year, color) {
+  const ns = "http://www.w3.org/2000/svg";
+  const s = document.createElementNS(ns, "svg"); s.setAttribute("width", "18"); s.setAttribute("height", "8"); s.classList.add("key");
+  const l = document.createElementNS(ns, "line");
+  l.setAttribute("x1", "1"); l.setAttribute("x2", "17"); l.setAttribute("y1", "4"); l.setAttribute("y2", "4");
+  l.setAttribute("stroke", color); l.setAttribute("stroke-width", year === NEXT ? "3" : "2.2"); l.setAttribute("stroke-linecap", "round");
+  if (DASH[year] === "dash") l.setAttribute("stroke-dasharray", "5 3");
+  if (DASH[year] === "dot") l.setAttribute("stroke-dasharray", "0.1 4");
+  s.append(l); return s;
+}
+
+// ---------- Sélecteur de candidats / duels
+function renderPicker() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  document.getElementById("pickerTitle").textContent = state.tour === 1 ? "Candidats" : "Duels de 2nd tour";
+  const pr = document.getElementById("presets"); pr.textContent = "";
+  PRESETS[state.tour].forEach(([lab, keys]) => {
+    const b = document.createElement("button"); b.textContent = lab;
+    b.addEventListener("click", () => {
+      let k = keys;
+      if (keys === "top2027") k = topOf(NEXT, 6);
+      setSel(new Set(k.filter(x => IDX[state.tour].has(x))));
+      k.forEach(x => { const y = +x.split("|")[0]; if (!state.years.includes(y)) state.years.push(y); });
+      update();
+    });
+    pr.append(b);
+  });
+  const box = document.getElementById("chipLists"); box.textContent = "";
+  const S = sel();
+  YEARS.slice().reverse().forEach(y => {
+    const groups = [...IDX[state.tour].values()].filter(g => g.e === y)
+      .sort((a, b) => (b.last > -400 ? b.n.size + 1000 : b.n.size) - (a.last > -400 ? a.n.size + 1000 : a.n.size));
+    let list = groups.filter(g => !q || g.label.toLowerCase().includes(q));
+    const minN = state.tour === 1 ? 4 : 2;
+    const hidden = list.filter(g => g.n.size < minN && !S.has(g.key)).length;
+    if (!state.showAll && !q) list = list.filter(g => g.n.size >= minN || S.has(g.key));
+    if (!list.length) return;
+    const sec = document.createElement("div"); sec.className = "elec";
+    const t = document.createElement("div"); t.className = "elec-title";
+    t.append(keySvg(y, "currentColor"), document.createTextNode(`${y}`));
+    const sm = document.createElement("span"); sm.className = "small"; sm.textContent = `1er tour le ${dFr(EL[y].tour1)}`; t.append(sm);
+    sec.append(t);
+    const chips = document.createElement("div"); chips.className = "chips";
+    list.forEach(g => {
+      const b = document.createElement("button"); b.className = "chip"; b.setAttribute("aria-pressed", String(S.has(g.key)));
+      b.title = `${g.label} (${y}) : ${g.n.size} sondage(s)`;
+      const firstCand = [...g.series.keys()][0];
+      b.append(keySvg(y, colorOf(state.tour === 1 ? g.label : firstCand, y)));
+      const nm = document.createElement("span"); nm.textContent = g.label; b.append(nm);
+      if (g.party) { const p = document.createElement("span"); p.className = "p"; p.textContent = g.party; b.append(p); }
+      const n = document.createElement("span"); n.className = "n"; n.textContent = g.n.size; b.append(n);
+      b.addEventListener("click", () => { const s = sel(); s.has(g.key) ? s.delete(g.key) : s.add(g.key); setSel(s);
+        if (!state.years.includes(y)) state.years.push(y); update(); });
+      chips.append(b);
+    });
+    sec.append(chips);
+    if (hidden && !q) {
+      const m = document.createElement("button"); m.className = "more";
+      m.textContent = state.showAll ? "Masquer les candidats peu testés" : `+ ${hidden} candidat(s) peu testé(s)`;
+      m.addEventListener("click", () => { state.showAll = !state.showAll; save(); renderPicker(); });
+      sec.append(m);
+    }
+    box.append(sec);
+  });
+}
+function topOf(year, k) {
+  // candidats 2027 les plus hauts sur les 120 derniers jours de sondage
+  const gs = [...IDX[1].values()].filter(g => g.e === year);
+  const last = Math.max(...gs.map(g => g.last));
+  return gs.map(g => { const s = g.series.get(g.label); const r = s.pts.filter(p => p.t > last - 120);
+      return { key: g.key, n: r.length, m: r.reduce((a, p) => a + p.v, 0) / (r.length || 1) }; })
+    .filter(o => o.n >= 5).sort((a, b) => b.m - a.m).slice(0, k).map(o => o.key);
+}
+
+// ---------- Calculs
+function aggregate(pts) {
+  if (state.agg === "all") return pts.map(p => ({ t: p.t, v: p.v, hs: [p.h], vs: [p.v] }));
+  const m = new Map();
+  for (const p of pts) {
+    if (!m.has(p.h.p)) m.set(p.h.p, { t: p.t, vs: [], hs: [] });
+    const o = m.get(p.h.p); o.vs.push(p.v); o.hs.push(p.h); o.t = Math.max(o.t, p.t);
+  }
+  return [...m.values()].map(o => ({ t: o.t, v: o.vs.reduce((a, b) => a + b, 0) / o.vs.length, vs: o.vs, hs: o.hs }));
+}
+function kernelAt(pts, g, s) {
+  let sw = 0, sv = 0;
+  for (const p of pts) { const z = (p.t - g) / s; if (z > 3 || z < -3) continue; const w = Math.exp(-0.5 * z * z); sw += w; sv += w * p.v; }
+  return sw >= 0.3 ? sv / sw : null;
+}
+function smoothLine(pts, win) {
+  if (!pts.length) return [];
+  if (!win) return pts.map(p => [p.t, p.v]);
+  const s = win / 4, step = Math.max(1, Math.round(win / 15)), out = [];
+  const t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+  let lo = 0;
+  for (let g = t0; ; g += step) {
+    if (g > t1) g = t1;
+    while (lo < pts.length && pts[lo].t < g - 3 * s) lo++;
+    let sw = 0, sv = 0;
+    for (let i = lo; i < pts.length && pts[i].t <= g + 3 * s; i++) { const z = (pts[i].t - g) / s; const w = Math.exp(-0.5 * z * z); sw += w; sv += w * pts[i].v; }
+    out.push([g, sw >= 0.3 ? sv / sw : null]);
+    if (g === t1) break;
+  }
+  return out;
+}
+
+function pointHover(s, p) {
+  const h = p.hs[0];
+  const party = PARTI[s.e + "|" + s.cand];
+  let txt = `<b>${esc(s.cand)}</b>${party ? " (" + esc(party) + ")" : ""} · ${s.e} — <b>${fmt(p.v)} %</b><br>`;
+  txt += `${esc(h.s)} · terrain ${esc(h.t)}${h.n ? " · " + h.n.toLocaleString("fr-FR") + " pers." : ""}<br>`;
+  txt += `<span style="opacity:.75">${dFr(h.d)} · ${jLabel(p.t)}</span>`;
+  if (state.tour === 2) {
+    const opp = Object.keys(h.v).find(c => c !== s.cand);
+    if (opp) txt += `<br>face à ${esc(opp)} (${fmt(h.v[opp])} %)`;
+  } else if (p.hs.length > 1) {
+    txt += `<br>Moyenne de ${p.hs.length} hypothèses (de ${fmt(Math.min(...p.vs))} à ${fmt(Math.max(...p.vs))} %)`;
+  } else {
+    const others = Object.entries(h.v).sort((a, b) => b[1] - a[1]);
+    const parts = others.map(([c, v]) => (c === s.cand ? `<b>${esc(c)} ${fmt(v)}</b>` : `${esc(c)} ${fmt(v)}`));
+    let lines = []; for (let i = 0; i < parts.length; i += 4) lines.push(parts.slice(i, i + 4).join(" · "));
+    txt += `<br><span style="opacity:.75">Hypothèse :</span><br>` + lines.join("<br>");
+  }
+  return txt;
+}
+
+// ---------- Rendu
+function selectedSeries() {
+  const out = [];
+  for (const key of sel()) {
+    const g = IDX[state.tour].get(key);
+    if (!g || !state.years.includes(g.e)) continue;
+    for (const s of g.series.values()) out.push({ g, s });
+  }
+  // ordre stable : élection récente d'abord, puis nom
+  out.sort((a, b) => b.s.e - a.s.e || a.s.cand.localeCompare(b.s.cand, "fr"));
+  return out;
+}
+
+function update(resetZoom) {
+  save(); syncControls(); renderPicker();
+  const css = getComputedStyle(document.documentElement);
+  const C = k => css.getPropertyValue(k).trim();
+  const series = selectedSeries();
+  const cal = state.mode === "calendar";
+  const xOf = (e, t) => cal ? isoOf(EL[e].t1 + t * DAY) : t;
+  const traces = [], ann = [], shapes = [], rows = [], cmp = [];
+  const win = state.smooth;
+  const tRef = -J_TODAY;
+
+  series.forEach(({ s }) => {
+    const color = colorOf(s.cand, s.e);
+    const name = `${s.cand} ${s.e}`;
+    const pts = aggregate(s.pts.slice().sort((a, b) => a.t - b.t)).sort((a, b) => a.t - b.t);
+    if (state.points && pts.length) {
+      traces.push({
+        type: "scatter", mode: "markers", name, legendgroup: name, showlegend: false,
+        x: pts.map(p => xOf(s.e, p.t)), y: pts.map(p => p.v),
+        text: pts.map(p => pointHover(s, p)), hovertemplate: "%{text}<extra></extra>",
+        marker: { color, size: 7, opacity: 0.4, symbol: SYMBOL[s.e], line: { width: 0 } }
+      });
+    }
+    const line = smoothLine(pts, win);
+    if (line.length) {
+      traces.push({
+        type: "scatter", mode: line.length === 1 ? "markers" : "lines", name, legendgroup: name,
+        x: line.map(p => xOf(s.e, p[0])), y: line.map(p => p[1] == null ? null : +p[1].toFixed(2)),
+        customdata: line.map(p => jLabel(p[0])),
+        hovertemplate: `<b>${esc(s.cand)} ${s.e}</b><br>${win ? "Moyenne lissée" : "Sondage"} : %{y:.1f} %<br>%{customdata}<extra></extra>`,
+        line: { color, width: WIDTH[s.e], dash: DASH[s.e] },
+        marker: { color, size: 8 }, connectgaps: false
+      });
+    }
+    if (s.res) {
+      traces.push({
+        type: "scatter", mode: "markers", name: name + " (résultat)", legendgroup: name, showlegend: false,
+        x: [xOf(s.e, s.res.t)], y: [s.res.v],
+        hovertemplate: `<b>${esc(s.cand)} ${s.e}</b><br>Résultat officiel : <b>${fmt(s.res.v, 2)} %</b><extra></extra>`,
+        marker: { color, size: 13, symbol: "star", line: { color: C("--surface"), width: 1.5 } }
+      });
+    }
+    // Comparaison à date équivalente
+    const last = pts[pts.length - 1];
+    const sAt = kernelAt(pts, tRef, (win || 30) / 4);
+    cmp.push({ s, color, at: sAt, last, res: s.res });
+    pts.forEach(p => rows.push({ s, p }));
+  });
+
+  // Libellés directs (≤ 4 séries)
+  const lineTraces = traces.filter(t => t.mode === "lines");
+  if (lineTraces.length && lineTraces.length <= 4) {
+    lineTraces.forEach(t => {
+      let i = t.y.length - 1; while (i >= 0 && t.y[i] == null) i--;
+      if (i < 0) return;
+      ann.push({ x: t.x[i], y: t.y[i], text: esc(t.name), showarrow: false, xanchor: "left", xshift: 8,
+        font: { size: 12, color: C("--ink2") } });
+    });
+  }
+
+  // Repères verticaux
+  const vline = (x, label, dash, color, anchor) => {
+    shapes.push({ type: "line", xref: "x", yref: "paper", x0: x, x1: x, y0: 0, y1: 1, line: { color, width: 1, dash } });
+    ann.push({ x, y: 1, xref: "x", yref: "paper", text: label, showarrow: false, yanchor: "bottom", xanchor: anchor || "center", font: { size: 11, color: C("--ink2") } });
+  };
+  if (!cal) {
+    vline(0, "1er tour", "solid", C("--muted"), state.tour === 2 ? "right" : "center");
+    if (state.tour === 2) vline(14, "2nd tour", "dot", C("--muted"), "left");
+    if (state.years.includes(NEXT) && J_TODAY > 0) vline(tRef, `Aujourd'hui (J-${J_TODAY})`, "dash", C("--accent"));
+  } else {
+    state.years.forEach(y => vline(EL[y].tour1, `1er tour ${y}`, "solid", C("--muted")));
+    vline(isoOf(todayUTC), "Aujourd'hui", "dash", C("--accent"));
+  }
+
+  // Axe X
+  const xaxis = { gridcolor: C("--grid"), linecolor: C("--line"), zeroline: false, tickfont: { color: C("--ink2") },
+    showspikes: true, spikemode: "across", spikethickness: 1, spikecolor: C("--muted"), spikedash: "dot" };
+  const spanDays = { "6m": 183, "1y": 366, "2y": 731 }[state.range];
+  if (!cal) {
+    const lo = spanDays ? -spanDays : Math.min(-30, ...rows.map(r => r.p.t));
+    const hi = state.tour === 2 ? 25 : 20;
+    if (spanDays) xaxis.range = [lo, hi];
+    const months = Math.ceil(-lo / 30.4375);
+    const step = months <= 8 ? 1 : months <= 26 ? 3 : months <= 60 ? 6 : 12;
+    xaxis.tickvals = []; xaxis.ticktext = [];
+    for (let k = 0; k <= months + step; k += step) { xaxis.tickvals.push(-k * 30.4375); xaxis.ticktext.push(k === 0 ? "1er tour" : `−${k} mois`); }
+    xaxis.title = { text: "Temps avant le 1er tour", font: { color: C("--ink2"), size: 12 } };
+  } else {
+    xaxis.type = "date"; xaxis.tickformat = "%b %Y";
+    if (spanDays) {
+      const maxT = rows.length ? Math.max(...rows.map(r => EL[r.s.e].t1 + r.p.t * DAY)) : todayUTC;
+      xaxis.range = [isoOf(maxT - spanDays * DAY), isoOf(maxT + 20 * DAY)];
+    }
+  }
+
+  const layout = {
+    paper_bgcolor: C("--surface"), plot_bgcolor: C("--surface"), separators: ", ",
+    font: { family: getComputedStyle(document.body).fontFamily, color: C("--ink"), size: 12 },
+    margin: { l: 48, r: lineTraces.length <= 4 ? 110 : 16, t: 28, b: 48 },
+    hovermode: "closest", hoverdistance: 16,
+    hoverlabel: { bgcolor: C("--surface"), bordercolor: C("--line"), font: { color: C("--ink"), size: 12 }, align: "left" },
+    xaxis, yaxis: { title: { text: "Intentions de vote (%)", font: { color: C("--ink2"), size: 12 } }, rangemode: "tozero",
+      gridcolor: C("--grid"), linecolor: C("--line"), zeroline: false, tickfont: { color: C("--ink2") }, ticksuffix: " %" },
+    legend: { orientation: "h", y: -0.16, x: 0, font: { color: C("--ink2") }, itemclick: "toggle", itemdoubleclick: "toggleothers" },
+    shapes, annotations: ann,
+    uirevision: resetZoom ? Date.now() : (state.tour + state.mode + state.range)
+  };
+  const el = document.getElementById("chart");
+  if (!series.length) {
+    Plotly.purge(el); el.innerHTML = '<div class="empty">Choisissez au moins un candidat dans la liste (ou un préréglage).</div>';
+  } else {
+    if (el.querySelector(".empty")) el.innerHTML = "";
+    Plotly.react(el, traces, layout, { responsive: true, displaylogo: false, locale: "fr", modeBarButtonsToRemove: ["lasso2d", "select2d"] });
+  }
+
+  // Titres & notes
+  document.getElementById("chartTitle").textContent = state.tour === 1 ? "Intentions de vote au 1er tour" : "Intentions de vote au 2nd tour (duels testés)";
+  document.getElementById("chartNote").textContent =
+    (cal ? "Axe : date de fin de terrain. " : "Axe : jours avant le 1er tour de chaque élection. ") +
+    "Trait plein = 2027, tirets = 2022, pointillés = 2017. ★ = résultat officiel.";
+  renderCmp(cmp, tRef);
+  renderData(rows);
+}
+
+function renderCmp(cmp, tRef) {
+  const t = document.getElementById("cmpTable"); t.textContent = "";
+  document.getElementById("cmpTitle").textContent = `Comparaison à date équivalente : J-${J_TODAY}`;
+  const head = t.createTHead().insertRow();
+  [["Série", ""], [`Moyenne à J-${J_TODAY}`, "num"], ["Dernier sondage", ""], ["Score dernier sondage", "num"], ["Résultat officiel", "num"], ["Écart résultat − J-" + J_TODAY, "num"]]
+    .forEach(([h, c]) => { const th = document.createElement("th"); th.textContent = h; if (c) th.className = c; head.append(th); });
+  const tb = t.createTBody();
+  cmp.sort((a, b) => b.s.e - a.s.e || (b.at ?? -1) - (a.at ?? -1)).forEach(o => {
+    const r = tb.insertRow();
+    const c0 = r.insertCell(); c0.append(keySvg(o.s.e, o.color), document.createTextNode(`${o.s.cand} ${o.s.e}`));
+    const add = (txt, num) => { const c = r.insertCell(); c.textContent = txt; if (num) c.className = "num"; };
+    add(o.at == null ? "—" : fmt(o.at) + " %", 1);
+    add(o.last ? `${dFr(o.last.hs[0].d)} (${o.last.hs[0].s})` : "—");
+    add(o.last ? fmt(o.last.v) + " %" : "—", 1);
+    add(o.res ? fmt(o.res.v, 2) + " %" : "—", 1);
+    add(o.res && o.at != null ? (o.res.v - o.at > 0 ? "+" : "") + fmt(o.res.v - o.at) + " pt" : "—", 1);
+  });
+  document.getElementById("cmpNote").textContent =
+    `Moyenne lissée des sondages à ${J_TODAY} jours du 1er tour (soit l'équivalent d'aujourd'hui pour 2027), calculée avec la fenêtre de lissage choisie (30 j par défaut). « — » = pas de sondage assez proche de cette date.`;
+}
+
+function renderData(rows) {
+  const t = document.getElementById("dataTable"); t.textContent = "";
+  const head = t.createTHead().insertRow();
+  [["Élection", ""], ["Fin de terrain", ""], ["Sondeur", ""], ["Échantillon", "num"], ["Candidat", ""], ["Score", "num"], ["Hypothèses", "num"]]
+    .forEach(([h, c]) => { const th = document.createElement("th"); th.textContent = h; if (c) th.className = c; head.append(th); });
+  const tb = t.createTBody();
+  const sorted = rows.slice().sort((a, b) => (EL[b.s.e].t1 + b.p.t * DAY) - (EL[a.s.e].t1 + a.p.t * DAY));
+  const MAX = 400;
+  sorted.slice(0, MAX).forEach(({ s, p }) => {
+    const h = p.hs[0], r = tb.insertRow();
+    [s.e, dFr(h.d), h.s, h.n ? h.n.toLocaleString("fr-FR") : "—", s.cand, fmt(p.v) + " %", p.hs.length].forEach((v, i) => {
+      const c = r.insertCell(); c.textContent = v; if ([3, 5, 6].includes(i)) c.className = "num"; });
+  });
+  document.getElementById("dataNote").textContent = sorted.length > MAX ? `${MAX} lignes les plus récentes affichées sur ${sorted.length}.` : `${sorted.length} lignes.`;
+}
+
+// ---------- Init
+const nPolls = new Set(D.t1.map(h => h.p)).size;
+document.getElementById("subtitle").innerHTML =
+  `Aujourd'hui : <b>J-${J_TODAY}</b> avant le 1er tour du ${dFr(EL[NEXT].tour1)}. ` +
+  `${nPolls} sondages de 1er tour (${D.t1.length} hypothèses) et ${D.t2.length} hypothèses de 2nd tour.`;
+document.getElementById("majNote").textContent = `Données extraites le ${D.maj}.`;
+update(true);
+})();
+</script>
+</body>
+</html>

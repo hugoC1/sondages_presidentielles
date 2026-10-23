@@ -1,0 +1,5 @@
+# Pages Wikipédia brutes : re-téléchargées à chaque extraction
+data/raw/
+_site/
+.Rhistory
+.RData

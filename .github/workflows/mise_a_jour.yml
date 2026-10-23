@@ -1,0 +1,66 @@
+name: Mise à jour des sondages
+
+on:
+  schedule:
+    - cron: "17 5 * * *"     # tous les jours vers 6-7 h (heure de Paris)
+  workflow_dispatch:          # bouton « Run workflow » dans l'onglet Actions
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  extraire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Installer les packages R
+        run: Rscript -e 'install.packages(c("rvest", "xml2", "jsonlite"))'
+
+      - name: Télécharger Wikipédia et extraire les sondages
+        run: Rscript scripts/parse_wikipedia.R
+
+      - name: Enregistrer les nouvelles données
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/sondages.js data/sondages_1er_tour.csv data/sondages_2nd_tour.csv
+          if git diff --cached --quiet; then
+            echo "Aucun changement."
+          else
+            git commit -m "Mise à jour des sondages $(date -u +%F)"
+            git push
+          fi
+
+      - name: Préparer le site
+        run: |
+          mkdir -p _site/data
+          cp -r index.html lib _site/
+          cp data/sondages.js data/sondages_1er_tour.csv data/sondages_2nd_tour.csv _site/data/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  publier:
+    needs: extraire
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - id: deploiement
+        uses: actions/deploy-pages@v4
